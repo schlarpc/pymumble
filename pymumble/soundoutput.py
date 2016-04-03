@@ -69,7 +69,10 @@ class SoundOutput:
                 to_encode = self.pcm.pop(0)
                 self.lock.release()
                 
-                encoded = self.encoder.encode(to_encode, len(to_encode)/2)
+                try:
+                    encoded = self.encoder.encode(to_encode, len(to_encode)/2)
+                except opuslib.exceptions.OpusError:
+                    encoded = b''
                          
                 audio_encoded += self.encoder_framesize
                 
