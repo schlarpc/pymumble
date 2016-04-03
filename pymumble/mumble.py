@@ -25,13 +25,14 @@ class Mumble(threading.Thread):
     Mumble client library main object.
     basically a thread
     """
-    def __init__(self, host=None, port=None, user=None, password=None, client_certif=None, reconnect=False, debug=False):
+    def __init__(self, host=None, port=None, user=None, password=None, certfile=None, keyfile=None, reconnect=False, debug=False):
         """
         host=mumble server hostname or address
         port=mumble server port
         user=user to use for the connection
         password=password for the connection
-        client_certif=client certificate to authenticate the connection (NOT IMPLEMENTED)
+        certfile=client certificate to authenticate the connection
+        keyfile=private key to authenticate the connection
         reconnect=if True, try to reconnect if disconnected
         debug=if True, send debugging messages (lot of...) to the stdout
         """
@@ -59,7 +60,8 @@ class Mumble(threading.Thread):
         self.port = port
         self.user = user
         self.password = password
-        self.client_certif = client_certif
+        self.certfile = certfile
+        self.keyfile = keyfile
         self.reconnect = reconnect
         
         self.receive_sound = False  # set to True to treat incoming audio, otherwise it is simply ignored
@@ -116,7 +118,7 @@ class Mumble(threading.Thread):
         # Connect the SSL tunnel
         self.Log.debug("connecting to %s on port %i.", self.host, self.port)
         std_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.control_socket = ssl.wrap_socket(std_sock, certfile=self.client_certif, ssl_version=ssl.PROTOCOL_TLSv1)
+        self.control_socket = ssl.wrap_socket(std_sock, certfile=self.certfile, keyfile=self.keyfile, ssl_version=ssl.PROTOCOL_TLSv1)
 
         self.control_socket.connect((self.host, self.port))
         
