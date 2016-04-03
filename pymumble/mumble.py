@@ -105,7 +105,10 @@ class Mumble(threading.Thread):
             
             self.connect()
             
-            self.loop()
+            try:
+                self.loop()
+            except socket.error:
+                self.connected = PYMUMBLE_CONN_STATE_NOT_CONNECTED
         
             if not self.reconnect or not self.parent_thread.is_alive():
                 break
