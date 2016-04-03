@@ -25,7 +25,7 @@ class SoundOutput:
         
         self.Log = self.mumble_object.Log
         
-        self.pcm = ""
+        self.pcm = []
         self.lock = threading.Lock()
         
         self.codec = None  # codec currently requested by the server
@@ -47,8 +47,6 @@ class SoundOutput:
         if not self.encoder or len(self.pcm) == 0:  # no codec configured or no audio sent
             return()
         
-        samples = int(self.encoder_framesize * PYMUMBLE_SAMPLERATE * 2)  # number of samples in an encoder frame
-        
         while len(self.pcm) > 0 and self.sequence_last_time + self.audio_per_packet <= time():  # audio to send and time to send it (since last packet)
             current_time = time()
             if self.sequence_last_time + PYMUMBLE_SEQUENCE_RESET_INTERVAL <= current_time:  # waited enough, resetting sequence to 0
@@ -68,8 +66,7 @@ class SoundOutput:
             
             while len(self.pcm) > 0 and audio_encoded < self.audio_per_packet:  # more audio to be sent and packet not full
                 self.lock.acquire()
-                to_encode = self.pcm[:samples]  # remove a frame from the input buffer
-                self.pcm = self.pcm[samples:]
+                to_encode = self.pcm.pop(0)
                 self.lock.release()
                 
                 encoded = self.encoder.encode(to_encode, len(to_encode)/2)
@@ -146,14 +143,22 @@ class SoundOutput:
         """add sound to be sent (in PCM mono 16 bits signed format)"""
         if len(pcm) % 2 != 0:  # check that the data is align on 16 bits
             raise Exception("pcm data must be mono 16 bits")
+        
+        samples = int(self.encoder_framesize * PYMUMBLE_SAMPLERATE * 2)  # number of samples in an encoder frame
 
         self.lock.acquire()
-        self.pcm += pcm
+        if len(self.pcm) and len(self.pcm[-1]) < samples:
+            initial_offset = samples - len(self.pcm[-1])
+            self.pcm[-1] += pcm[:initial_offset]
+        else:
+            initial_offset = 0
+        for i in range(initial_offset, len(pcm), samples):
+            self.pcm.append(pcm[i:i+samples])
         self.lock.release()
         
     def get_buffer_size(self):
         """return the size of the unsent buffer in sec"""
-        return len(self.pcm)/2/PYMUMBLE_SAMPLERATE
+        return sum(len(chunk) for chunk in self.pcm) / 2. / PYMUMBLE_SAMPLERATE
         
     def set_default_codec(self, codecversion):
         """Set the default codec to be used to send packets"""
