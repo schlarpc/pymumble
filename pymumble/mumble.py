@@ -315,6 +315,7 @@ class Mumble(threading.Thread):
             mess = mumble_pb2.CryptSetup()
             mess.ParseFromString(message)
             self.Log.debug("message: CryptSetup : %s", mess)
+            self.ping()
             
         elif type == PYMUMBLE_MSG_TYPES_CONTEXTACTIONADD:
             mess = mumble_pb2.ContextActionAdd()
